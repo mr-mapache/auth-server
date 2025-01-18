@@ -12,11 +12,15 @@ redis = "^5.2.1"
 pydantic-settings = "^2.7.1"
 fast-depends = "^2.4.12"
 asyncpg = "^0.30.0"
+fastapi = "^0.115.6"
+pydantic = {extras = ["email"], version = "^2.10.5"}
+anyio = "^4.8.0"
 
 
 [tool.poetry.group.tests.dependencies]
-pytest-asyncio = "^0.25.1"
 httpx = "^0.28.1"
+pytest-asyncio = "^0.25.2"
+trio = "^0.28.0"
 
 
 [tool.poetry.group.server.dependencies]

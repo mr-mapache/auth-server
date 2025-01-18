@@ -2,7 +2,6 @@ from uuid import UUID
 from pydantic import EmailStr
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import ConfigDict
 
 class Query(BaseModel):...
 
@@ -17,4 +16,4 @@ class GetUserByAccount(Query):
     account_id: str = Field(..., validation_alias='providerAccountId')
 
 class GetSessionAndUser(Query):
-    session_id: UUID = Field(..., validation_alias='sessionToken')
+    session_id: str = Field(..., validation_alias='sessionToken')

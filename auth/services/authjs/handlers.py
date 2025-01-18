@@ -21,7 +21,8 @@ from auth.services.authjs.queries import (
 from auth.services.authjs.schemas import (
     User,
     Session,
-    Account
+    Account,
+    SessionAndUser
 )
 
 from auth.services.authjs.exceptions import (
@@ -32,18 +33,21 @@ from auth.services.authjs.exceptions import (
     AccountNotFound
 )
 
-from auth.domain.aggregate import Repository
-from auth.services.messagebus import Messagebus
-from auth.services.messagebus import Depends
+from auth.services.schemas import validator
+from auth.services.service import Service
+from auth.services.service import Depends
+from auth.domain.users import Users
 from re import sub
 
-messagebus = Messagebus(key_generator=lambda name: sub(r'([a-z])([A-Z])', r'\1_\2', name).upper())
+service = Service()
+service.generator = lambda name: sub(r'([a-z])([A-Z])', r'\1-\2', name).lower()
+service.validator = validator
 
-async def repository_port(*args, **kwargs) -> Repository:
+async def users_port(*args, **kwargs) -> Users:
     raise NotImplementedError('Override this dependency with a concrete implementation')
 
-@messagebus.handler
-async def handle_create_user(command: CreateUser, users: Annotated[Repository, Depends(repository_port)]):
+@service.handler
+async def handle_create_user(command: CreateUser, users: Users = Depends(users_port)):
     if await users.read(by='id', id=command.user_id) or await users.read(by='email', address=command.user_email_address):
         raise UserAlreadyExists('User already exists')
     
@@ -57,8 +61,8 @@ async def handle_create_user(command: CreateUser, users: Annotated[Repository, D
     await user.emails.add(email)
 
 
-@messagebus.handler
-async def handle_update_user(command: UpdateUser, users: Annotated[Repository, Depends(repository_port)]):
+@service.handler
+async def handle_update_user(command: UpdateUser, users: Annotated[Users, Depends(users_port)]):
     user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
@@ -88,18 +92,20 @@ async def handle_update_user(command: UpdateUser, users: Annotated[Repository, D
                 email.verified_at = command.user_email_verified_at
             await user.emails.update(email)
 
-@messagebus.handler
-async def handle_delete_user(command: DeleteUser, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='id', id=command.user_id)
+
+
+@service.handler
+async def handle_delete_user(command: DeleteUser, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
-    await repository.delete(id=command.user_id)
+    await users.delete(id=command.user_id)
 
 
 
-@messagebus.handler
-async def handle_link_account(command: LinkAccount, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='id', id=command.user_id)
+@service.handler
+async def handle_link_account(command: LinkAccount, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
     account = user.accounts.create(command.account_type, command.account_provider, command.account_id)
@@ -117,9 +123,9 @@ async def handle_link_account(command: LinkAccount, repository: Annotated[Reposi
     )
 
 
-@messagebus.handler
-async def handle_unlink_account(command: UnlinkAccount, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='account', provider=command.account_provider, id=command.account_id)
+@service.handler
+async def handle_unlink_account(command: UnlinkAccount, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='account', provider=command.account_provider, id=command.account_id)
     if not user:
         raise UserNotFound('User not found')
     account = await user.accounts.get(command.account_provider, command.account_id)
@@ -128,27 +134,9 @@ async def handle_unlink_account(command: UnlinkAccount, repository: Annotated[Re
     await user.accounts.remove(account)
 
 
-@messagebus.handler
-async def handle_create_session(command: CreateSession, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='id', id=command.user_id)
-    email = next(email for email in await user.emails.list() if email.is_primary)
-    payload = {
-        'id': str(user.id),
-        'email': email.address,
-        'emailVerified': email.verified_at.isoformat() if email.verified_at else None,
-        'name': user.name,
-        'image': None
-    }
-    session = user.sessions.create(command.session_id, payload=payload, expires_at=command.expires_at)
-    await user.sessions.put(session)
-    return Session(
-        id=session.id,
-        expires_at=session.expires_at
-    )
-
-@messagebus.handler
-async def handle_update_session(command: UpdateSession, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='session', id=command.session_id)
+@service.handler
+async def handle_create_session(command: CreateSession, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='id', id=command.user_id)
     email = next(email for email in await user.emails.list() if email.is_primary)
     payload = {
         'id': str(user.id),
@@ -165,9 +153,29 @@ async def handle_update_session(command: UpdateSession, repository: Annotated[Re
     )
 
 
-@messagebus.handler
-async def handle_delete_session(command: DeleteSession, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='session', id=command.session_id)
+@service.handler
+async def handle_update_session(command: UpdateSession, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='session', id=command.session_id)
+    email = next(email for email in await user.emails.list() if email.is_primary)
+    payload = {
+        'id': str(user.id),
+        'email': email.address,
+        'emailVerified': email.verified_at.isoformat() if email.verified_at else None,
+        'name': user.name,
+        'image': None
+    }
+    session = user.sessions.create(command.session_id, payload=payload, expires_at=command.expires_at)
+    await user.sessions.put(session)
+    return Session(
+        id=session.id,
+        expires_at=session.expires_at
+    )
+
+
+
+@service.handler
+async def handle_delete_session(command: DeleteSession, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='session', id=command.session_id)
     if not user:
         raise UserNotFound('User not found')
     session = await user.sessions.get(command.session_id)
@@ -176,9 +184,11 @@ async def handle_delete_session(command: DeleteSession, repository: Annotated[Re
     await user.sessions.remove(session)
 
 
-@messagebus.handler
-async def handle_get_user_by_id(query: GetUserById, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='id', id=query.user_id)
+
+
+@service.handler
+async def handle_get_user_by_id(query: GetUserById, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='id', id=query.user_id)
     if not user:
         raise UserNotFound('User not found')
     email = next(email for email in await user.emails.list() if email.is_primary)
@@ -190,9 +200,11 @@ async def handle_get_user_by_id(query: GetUserById, repository: Annotated[Reposi
         profile_image=None
     )
 
-@messagebus.handler
-async def handle_get_user_by_email(query: GetUserByEmail, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='email', address=query.email_address)
+
+
+@service.handler
+async def handle_get_user_by_email(query: GetUserByEmail, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='email', address=query.email_address)
     if not user:
         raise UserNotFound('User not found')
     email = next(email for email in await user.emails.list() if email.is_primary)
@@ -204,9 +216,11 @@ async def handle_get_user_by_email(query: GetUserByEmail, repository: Annotated[
         profile_image=None
     )
 
-@messagebus.handler
-async def handle_get_user_by_account(query: GetUserByAccount, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='account', provider=query.account_provider, id=query.account_id)
+
+
+@service.handler
+async def handle_get_user_by_account(query: GetUserByAccount, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='account', provider=query.account_provider, id=query.account_id)
     if not user:
         raise UserNotFound('User not found')
     email = next(email for email in await user.emails.list() if email.is_primary)
@@ -218,18 +232,19 @@ async def handle_get_user_by_account(query: GetUserByAccount, repository: Annota
         profile_image=None
     )
 
-@messagebus.handler
-async def handle_get_session_and_user(query: GetSessionAndUser, repository: Annotated[Repository, Depends(repository_port)]):
-    user = await repository.read(by='session', id=query.session_id)
+
+@service.handler
+async def handle_get_session_and_user(query: GetSessionAndUser, users: Annotated[Users, Depends(users_port)]):
+    user = await users.read(by='session', id=query.session_id)
     if not user:
         raise UserNotFound('User not found')
     session = await user.sessions.get(query.session_id)
     if not session:
         raise AccountNotFound('Session not found')
-    return {
-        'session': Session(
-            id=str(session.id),
+    return SessionAndUser(
+        session=Session(
+            id=session.id,
             expires_at=session.expires_at
         ),
-        'user': User.model_validate(session.payload)
-    }
+        user=User.model_validate(session.payload)
+    )

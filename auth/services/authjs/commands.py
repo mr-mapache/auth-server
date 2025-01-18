@@ -5,7 +5,6 @@ from typing import Optional
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import EmailStr
-from pydantic import ConfigDict
 
 class Command(BaseModel):...
 
@@ -43,13 +42,13 @@ class UnlinkAccount(Command):
     account_provider: Annotated[str, Field(..., validation_alias='provider')]
 
 class CreateSession(Command):
-    session_id: Annotated[UUID, Field(..., validation_alias='sessionToken')]
+    session_id: Annotated[str, Field(..., validation_alias='sessionToken')]
     user_id: Annotated[str, Field(..., validation_alias='userId')]
     expires_at: Annotated[datetime, Field(..., validation_alias='expires')]
 
 class UpdateSession(Command):
-    session_id: Annotated[UUID, Field(..., validation_alias='sessionToken')]
+    session_id: Annotated[str, Field(..., validation_alias='sessionToken')]
     expires_at: Annotated[Optional[datetime], Field(..., validation_alias='expires')]
 
 class DeleteSession(Command):
-    session_id: Annotated[UUID, Field(..., validation_alias='sessionToken')]
+    session_id: Annotated[str, Field(..., validation_alias='sessionToken')]

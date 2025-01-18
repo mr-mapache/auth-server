@@ -1,29 +1,23 @@
 from pytest import mark
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
-from auth.domain.ports import Users
-from auth.domain.ports import Accounts
-from auth.domain.ports import Emails
-from auth.domain.ports import Sessions
-from auth.domain.aggregate import Repository
+from auth.domain.users import Users
+from auth.domain.accounts import Accounts
+from auth.domain.emails import Emails
+from auth.domain.sessions import Sessions
 
-@mark.asyncio
+@mark.anyio
 async def test_users(users: Users):
-    user = users.create()
-    id = user.id
-    await users.add(user)
+    user = await users.create(name='test')
     assert getattr(user, 'pk') is not None
-    user = await users.get(id)
-    assert user.id == id
-    assert user.name == None
-    user.name = 'Test'
-    await users.update(user)
-    user = await users.get(id)
-    assert user.name == 'Test'
-    await users.remove(user)
-    assert await users.get(id) == None
+    user = await users.read(by='id', id=user.id)
+    assert user.name == 'test'
+    user = await users.update(user.id, name='other')
+    assert user.name == 'other'
+    await users.delete(user.id)
+    assert await users.read(by='id', id=user.id) == None
 
-@mark.asyncio
+@mark.anyio
 async def test_accounts(accounts: Accounts):
     account = accounts.create('oauth', 'google', '123')
     await accounts.add(account)
@@ -38,7 +32,7 @@ async def test_accounts(accounts: Accounts):
     assert await accounts.get('google', '123') == None
 
 
-@mark.asyncio
+@mark.anyio
 async def test_emails(emails: Emails):
     email = emails.create('test@test.com', True, False)
     await emails.add(email)
@@ -61,29 +55,30 @@ async def test_emails(emails: Emails):
     await emails.remove(email)
     assert await emails.get('other@test.com') == None
 
-@mark.asyncio
+
+@mark.anyio
 async def test_sessions(sessions: Sessions):
-    session = sessions.create(UUID('00000000-0000-0000-0000-000000000000'), {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60))
+    session = sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60))
     await sessions.put(session)
     
-    session = await sessions.get(UUID('00000000-0000-0000-0000-000000000000'))
-    assert session.id == UUID('00000000-0000-0000-0000-000000000000')
+    session = await sessions.get('00000000-0000-0000-0000-000000000000')
+    assert session.id == '00000000-0000-0000-0000-000000000000'
     assert session.payload == {'test': 'test'}
     assert session.expires_at > datetime.now(timezone.utc)
 
     session_list = await sessions.list()
     assert len(session_list) == 1
     await sessions.remove(session)
-    assert await sessions.get(UUID('00000000-0000-0000-0000-000000000000')) == None
+    assert await sessions.get('00000000-0000-0000-0000-000000000000') == None
 
-    session = sessions.create(UUID('00000000-0000-0000-0000-000000000000'), {'test': 'test'}, datetime.now(timezone.utc) - timedelta(seconds=60))
+    session = sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) - timedelta(seconds=60))
     await sessions.put(session)
-    assert await sessions.get(UUID('00000000-0000-0000-0000-000000000000')) == None
+    assert await sessions.get('00000000-0000-0000-0000-000000000000') == None
 
     session_list = [
-        sessions.create(UUID('00000000-0000-0000-0000-000000000000'), {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
-        sessions.create(UUID('00000000-0000-0000-0000-000000000001'), {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
-        sessions.create(UUID('00000000-0000-0000-0000-000000000002'), {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
+        sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
+        sessions.create('00000000-0000-0000-0000-000000000001', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
+        sessions.create('00000000-0000-0000-0000-000000000002', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
     ]
 
     for session in session_list:
@@ -95,8 +90,3 @@ async def test_sessions(sessions: Sessions):
     await sessions.clear()
     session_list = await sessions.list()
     assert len(session_list) == 0
-
-@mark.asyncio
-async def test_repository(repository: Repository):
-    user = await repository.create(name='Test')
-    assert user.name == 'Test'

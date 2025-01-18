@@ -17,7 +17,7 @@ class User(Schema):
     profile_image: Annotated[Optional[str], Field(alias='image')]
 
 class Session(Schema):
-    id: Annotated[Optional[UUID], Field(alias='sessionToken')]
+    id: Annotated[Optional[str], Field(alias='sessionToken')]
     expires_at: Annotated[datetime, Field(alias='expires')]
 
 class Account(Schema):
@@ -30,3 +30,7 @@ class Account(Schema):
     id_token: Annotated[Optional[str], Field(default=None)]
     refresh_token: Annotated[Optional[str], Field(default=None)]
     scope: Annotated[Optional[str], Field(default=None)]
+
+class SessionAndUser(Schema):
+    session: Annotated[Session, Field(alias='session')]
+    user: Annotated[User, Field(alias='user')]

@@ -5,13 +5,12 @@ from typing import override
 from datetime import datetime, timezone, timedelta
 from json import dumps, loads
 from dataclasses import dataclass
-from auth.domain.models import User
-from auth.domain.ports import Sessions as Collection
-from auth.adapters.setup import UnitOfWork
+from auth.domain.sessions import Sessions as Collection
+from auth.adapters.utils import UnitOfWork
 
 @dataclass
 class Session:
-    id: UUID
+    id: str
     payload: dict[str, Any]
     expires_at: datetime
 
@@ -25,24 +24,24 @@ class Session:
 
 
 class Sessions(Collection):
-    def __init__(self, uow: UnitOfWork, user: Optional[User] = None):
-        self.user = user
+    def __init__(self, uow: UnitOfWork, user_id: Optional[UUID] = None):
+        self.user_id = user_id
         self.uow = uow
 
     @override
-    def create(self, id: UUID, payload: dict[str, Any], expires_at: datetime) -> Session:
+    def create(self, id: str, payload: dict[str, Any], expires_at: datetime) -> Session:
         return Session(id=id, payload=payload, expires_at=expires_at)
 
     @override
     async def put(self, session: Session):
-        assert self.user is not None, 'User is required to put session'
+        assert self.user_id is not None, 'User is required to put session'
         if not session.is_expired:
-            await self.uow.redis.set(f'{str(self.user.id)}:{str(session.id)}', str(session.id), ex=session.expires_in)
-            await self.uow.redis.hset('session', f'{str(self.user.id)}:{str(session.id)}', dumps(session.payload))
+            await self.uow.redis.set(f'{str(self.user_id)}:{session.id}', session.id, ex=session.expires_in)
+            await self.uow.redis.hset('session', f'{str(self.user_id)}:{str(session.id)}', dumps(session.payload))
 
     @override
-    async def get(self, id: UUID) -> Optional[Session]:         
-        async for key in self.uow.redis.scan_iter(match=f'*:{str(id)}', count=1):
+    async def get(self, id: str) -> Optional[Session]:         
+        async for key in self.uow.redis.scan_iter(match=f'*:{id}', count=1):
             payload = await self.uow.redis.hget('session', key)
             expires_in = await self.uow.redis.ttl(key)
             expires_at = datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
@@ -55,19 +54,19 @@ class Sessions(Collection):
 
     @override
     async def list(self) -> list[Session]:
-        assert self.user is not None, 'User is required to list sessions'
+        assert self.user_id is not None, 'User is required to list sessions'
         sessions = []
-        async for key in self.uow.redis.scan_iter(match=f'{str(self.user.id)}:*'):
+        async for key in self.uow.redis.scan_iter(match=f'{str(self.user_id)}:*'):
             id = await self.uow.redis.get(key)
             payload = await self.uow.redis.hget('session', key)
             expires_in = await self.uow.redis.ttl(key)
             if expires_in > 0:
                 expires_at = datetime.now(tz=timezone.utc) + timedelta(seconds=expires_in)
-                sessions.append(Session(id=UUID(bytes(id).decode()), payload=loads(payload), expires_at=expires_at))
+                sessions.append(Session(id=bytes(id).decode(), payload=loads(payload), expires_at=expires_at))
         return sessions
 
     @override
     async def clear(self):
-        assert self.user is not None, 'User is required to clear sessions'
-        async for key in self.uow.redis.scan_iter(match=f'{str(self.user.id)}:*'):
+        assert self.user_id is not None, 'User is required to clear sessions'
+        async for key in self.uow.redis.scan_iter(match=f'{str(self.user_id)}:*'):
             await self.uow.redis.delete(key)

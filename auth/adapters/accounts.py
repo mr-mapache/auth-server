@@ -1,48 +1,74 @@
 from typing import override
 from typing import Optional
+from dataclasses import dataclass
+from sqlalchemy.sql import insert, select, delete
 
-from sqlalchemy.sql import insert, select, update, delete
+from auth.adapters.schemas import accounts
+from auth.adapters.utils import UnitOfWork
+from auth.domain.accounts import Accounts as Collection
 
-from auth.domain.ports import Accounts as Collection
-from auth.adapters.schemas import User, Account
-from auth.adapters.setup import UnitOfWork
+@dataclass
+class Account:
+    id: str
+    type: str
+    provider: str
+    pk: int = None
 
 class Accounts(Collection):
-    def __init__(self, uow: UnitOfWork, user: Optional[User] = None):
+    def __init__(self, uow: UnitOfWork, user_pk: Optional[int] = None):
+        self.user_pk = user_pk
         self.uow = uow
-        self.user = user
 
     @override
     def create(self, type: str, provider: str, id: str) -> Account:
-        assert self.user is not None, 'User is required for account creation'
-        return Account(type=type, provider=provider, id=id, user_pk=self.user.pk)
-    
+        return Account(id=id, type=type, provider=provider)
+
     @override
-    async def add(self, account: Account) -> None:
-        assert self.user is not None, 'User is required for adding an account'
+    async def add(self, account: Account):
+        assert self.user_pk is not None, "Accounts must be associated with a user"
         command = (
-            insert(Account).
-            values(type=account.type, provider=account.provider, id=account.id, user_pk=account.user_pk).
-            returning(Account.pk)
+            insert(accounts).
+            values(
+                user_pk=self.user_pk,
+                account_type=account.type,
+                account_provider=account.provider,
+                account_id=account.id
+            ).
+            returning(accounts.columns.pk)
         )
-        result = await self.uow.session.execute(command)
+        result = await self.uow.sql.execute(command)
         account.pk = result.scalar()
 
     @override
     async def get(self, provider: str, id: str) -> Optional[Account]:
-        query = select(Account).where(Account.provider == provider, Account.id == id)
-        result = await self.uow.session.execute(query)
-        return result.scalars().first()
-    
-    @override
-    async def remove(self, account: Account) -> None:
-        command = delete(Account).where(Account.pk == account.pk)
-        await self.uow.session.execute(command)
-        account.pk = None
-    
+        query = (
+            select(accounts).
+            where(
+                accounts.columns.account_provider == provider,
+                accounts.columns.account_id == id
+            )
+        )
+        result = await self.uow.sql.execute(query)
+        row = result.fetchone()
+        return Account(id=row.account_id, type=row.account_type, provider=row.account_provider, pk=row.pk) if row else None
+
     @override
     async def list(self) -> list[Account]:
-        assert self.user is not None, 'User is required for account listing'
-        query = select(Account).where(Account.user_pk == self.user.pk)
-        result = await self.uow.session.execute(query)
-        return result.scalars().all()
+        assert self.user_pk is not None, "Accounts must be associated with a user"
+        query = (
+            select(accounts).
+            where(accounts.columns.user_pk == self.user_pk)
+        )
+        result = await self.uow.sql.execute(query)
+        return [Account(id=row.account_id, type=row.account_type, provider=row.account_provider, pk=row.pk) for row in result]
+
+    @override
+    async def remove(self, account: Account):
+        command = (
+            delete(accounts).
+            where(
+                accounts.columns.account_provider == account.provider,
+                accounts.columns.account_id == account.id
+            )
+        )
+        await self.uow.sql.execute(command)

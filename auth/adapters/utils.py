@@ -36,14 +36,14 @@ class UnitOfWork:
         self.cache = cache
     
     async def __aenter__(self):
-        self.session = self.database.sessionmaker()
+        self.sql = self.database.sessionmaker()
         self.redis = self.cache.redis
-        await self.session.begin()
+        await self.sql.begin()
         return self
     
     async def __aexit__(self, exception_type, exception_value, traceback):
         if exception_type is not None:
-            await self.session.rollback()
+            await self.sql.rollback()
         else:
-            await self.session.commit()
-        await self.session.close()
+            await self.sql.commit()
+        await self.sql.close()

@@ -1,19 +1,19 @@
-from pytest import fixture
+from asyncio import run
+from pytest_asyncio import fixture
 from fastapi import FastAPI
 from httpx import AsyncClient, ASGITransport
+from auth.controllers import cqs
+from auth.services import authjs
 
-from auth.controllers.routers import cqs
-from auth.controllers.api import api
-from auth.services.authjs.handlers import messagebus, repository_port
+@fixture(scope='function')
+async def authjs_service(users):
+    authjs.service.dependency_overrides[authjs.port] = lambda: users
+    return authjs.service
 
-@fixture
-async def messagebus_adapter(repository):
-    messagebus.dependency_overrides[repository_port] = lambda: repository
-    return messagebus
-
-@fixture
-async def nextauth_client(messagebus_adapter):
+@fixture(scope='function')
+async def authjs_client(authjs_service):
+    api = FastAPI()
     api.include_router(cqs.router)
-    api.dependency_overrides[cqs.messagebus_port] = lambda: messagebus_adapter
-    async with AsyncClient(transport=ASGITransport(api), base_url='http://testserver/cqrs') as client:
+    api.dependency_overrides[cqs.port] = lambda: authjs_service
+    async with AsyncClient(transport=ASGITransport(api), base_url='http://testserver') as client:
         yield client

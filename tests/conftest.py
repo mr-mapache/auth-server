@@ -1,13 +1,12 @@
-from pytest import fixture
+from pytest_asyncio import fixture
 from uuid import UUID
 from auth.settings import Settings
 from auth.adapters.schemas import Schema
-from auth.adapters.setup import Database, Cache, UnitOfWork
+from auth.adapters.utils import Database, Cache, UnitOfWork
 from auth.adapters.users import Users
 from auth.adapters.accounts import Accounts
 from auth.adapters.emails import Emails
 from auth.adapters.sessions import Sessions
-from auth.adapters.repository import Repository
 
 @fixture(scope='session')
 def settings() -> Settings:
@@ -47,22 +46,16 @@ async def users(uow: UnitOfWork):
 
 @fixture(scope='function')
 async def accounts(uow: UnitOfWork, users: Users):
-    user = users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    await users.add(user)
-    return Accounts(uow, user)
+    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
+    return Accounts(uow, user.pk)
 
 @fixture(scope='function')
 async def emails(uow: UnitOfWork, users: Users):
-    user = users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    await users.add(user)
-    return Emails(uow, user)
+    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
+    return Emails(uow, user.pk)
+
 
 @fixture(scope='function')
 async def sessions(uow: UnitOfWork, users: Users):
-    user = users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    await users.add(user)
-    return Sessions(uow, user)
-
-@fixture(scope='function')
-async def repository(uow: UnitOfWork):
-    return Repository(uow)
+    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
+    return Sessions(uow, user.id)

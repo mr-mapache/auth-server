@@ -27,3 +27,7 @@ class Email(Schema):
     is_verified: Mapped[bool] = mapped_column('email_is_verified', nullable=False)
     verified_at: Mapped[Optional[datetime]] = mapped_column('email_verified_at', DateTime(timezone=True))
     user_pk: Mapped[int] = mapped_column('user_pk', ForeignKey('users.pk', ondelete='CASCADE'), nullable=False)
+
+users = User.__table__
+accounts = Account.__table__
+emails = Email.__table__
