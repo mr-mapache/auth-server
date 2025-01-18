@@ -15,5 +15,8 @@ class GetUserByAccount(Query):
     account_provider: str = Field(..., validation_alias='provider')
     account_id: str = Field(..., validation_alias='providerAccountId')
 
+class GetSession(Query):
+    session_id: str = Field(..., validation_alias='sessionToken')
+
 class GetSessionAndUser(Query):
     session_id: str = Field(..., validation_alias='sessionToken')

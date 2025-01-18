@@ -21,6 +21,9 @@ class Users(ABC):
     """
     An abstract base class for the repository of users.
     """
+    emails: Emails
+    accounts: Accounts
+    sessions: Sessions
 
     @abstractmethod
     async def create(self, id: UUID = None, name: Optional[str] = None) -> User:...

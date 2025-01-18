@@ -120,7 +120,7 @@ async def test_create_and_manage_session(authjs_service: Service):
     updated_session_data = await authjs_service.execute('get-session-and-user', {
         'sessionToken': 'session123'
     })
-
+    assert updated_session_data.session.id == session.id
     # Delete the session
     await authjs_service.execute('delete-session', {
         'sessionToken': 'session123'

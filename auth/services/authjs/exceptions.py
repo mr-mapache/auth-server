@@ -19,3 +19,7 @@ class UserNotFound(NotFoundError):
 class AccountNotFound(NotFoundError):
     def __init__(self, message: str = "Account not found"):
         super().__init__(message)
+        
+class SessionNotFound(NotFoundError):
+    def __init__(self, message: str = "Session not found"):
+        super().__init__(message)

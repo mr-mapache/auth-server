@@ -23,6 +23,9 @@ class User:
 class Users(Repository):
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
+        self.emails = Emails(self.uow)
+        self.accounts = Accounts(self.uow)
+        self.sessions = Sessions(self.uow)
 
     @override
     async def create(self, id: UUID = None, name: Optional[str] = None) -> User:

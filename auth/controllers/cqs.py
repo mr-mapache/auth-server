@@ -12,7 +12,7 @@ router = APIRouter()
 async def port() -> Service:
     raise NotImplementedError("Override this dependency with a concrete implementation")
 
-@router.post('/command')
+@router.post('/commands/')
 async def handle_command(request: Command, service: Annotated[Service, Depends(port)]):
     try:
         await service.execute(request.type, request.payload)
@@ -22,7 +22,7 @@ async def handle_command(request: Command, service: Annotated[Service, Depends(p
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exception))
     
 
-@router.post('/query')
+@router.post('/queries/')
 async def handle_query(request: Query, service: Annotated[Service, Depends(port)]):
     try:
         result = await service.execute(request.type, request.parameters)

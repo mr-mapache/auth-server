@@ -1,6 +1,5 @@
 from pytest import mark
 from datetime import datetime, timezone, timedelta
-from uuid import UUID
 from auth.domain.users import Users
 from auth.domain.accounts import Accounts
 from auth.domain.emails import Emails
