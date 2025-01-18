@@ -6,7 +6,7 @@ from sqlalchemy.sql import insert, select, update, delete
 
 from auth.domain.emails import Emails as Collection
 from auth.adapters.schemas import Email
-from auth.adapters.utils import UnitOfWork
+from auth.adapters.backend import UnitOfWork
 
 class Emails(Collection):
     def __init__(self, uow: UnitOfWork, user_pk: Optional[int] = None):

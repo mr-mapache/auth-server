@@ -6,7 +6,7 @@ from sqlalchemy.sql import insert, select, update, delete
 
 from auth.domain.users import Users as Repository
 from auth.adapters.schemas import users, emails, accounts
-from auth.adapters.utils import UnitOfWork
+from auth.adapters.backend import UnitOfWork
 from auth.adapters.emails import Emails
 from auth.adapters.accounts import Accounts
 from auth.adapters.sessions import Sessions

@@ -29,15 +29,6 @@ class CacheSettings(BaseSettings):
     def uri(self) -> str:
         return f'redis://{self.host}:{self.port}/0' 
 
-class APISettings(BaseSettings):
-    root_path: str = Field(default='/api')
-    model_config = SettingsConfigDict(env_prefix='API_')
-    
-
 class Settings(BaseSettings):
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     cache: CacheSettings = Field(default_factory=CacheSettings)
-    api: APISettings = Field(default_factory=APISettings)
-
-
-settings = Settings()

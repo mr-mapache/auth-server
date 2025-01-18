@@ -9,11 +9,11 @@ from auth.services.exceptions import HandlerNotFound
 
 router = APIRouter()
 
-async def port() -> Service:
+async def service() -> Service:
     raise NotImplementedError("Override this dependency with a concrete implementation")
 
 @router.post('/commands/')
-async def handle_command(request: Command, service: Annotated[Service, Depends(port)]):
+async def handle_command(request: Command, service: Annotated[Service, Depends(service)]):
     try:
         await service.execute(request.type, request.payload)
         return Response(status_code=status.HTTP_202_ACCEPTED)    
@@ -23,7 +23,7 @@ async def handle_command(request: Command, service: Annotated[Service, Depends(p
     
 
 @router.post('/queries/')
-async def handle_query(request: Query, service: Annotated[Service, Depends(port)]):
+async def handle_query(request: Query, service: Annotated[Service, Depends(service)]):
     try:
         result = await service.execute(request.type, request.parameters)
         return result

@@ -15,6 +15,7 @@ asyncpg = "^0.30.0"
 fastapi = "^0.115.6"
 pydantic = {extras = ["email"], version = "^2.10.5"}
 anyio = "^4.8.0"
+secure = "^1.0.1"
 
 
 [tool.poetry.group.tests.dependencies]

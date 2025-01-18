@@ -1,8 +1,8 @@
 from pytest_asyncio import fixture
 from uuid import UUID
-from auth.settings import Settings
+from auth.adapters.settings import Settings
 from auth.adapters.schemas import Schema
-from auth.adapters.utils import Database, Cache, UnitOfWork
+from auth.adapters.backend import Database, Cache, UnitOfWork
 from auth.adapters.users import Users
 from auth.adapters.accounts import Accounts
 from auth.adapters.emails import Emails

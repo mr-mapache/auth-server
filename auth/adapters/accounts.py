@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy.sql import insert, select, delete
 
 from auth.adapters.schemas import accounts
-from auth.adapters.utils import UnitOfWork
+from auth.adapters.backend import UnitOfWork
 from auth.domain.accounts import Accounts as Collection
 
 @dataclass

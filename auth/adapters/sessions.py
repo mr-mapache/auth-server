@@ -6,7 +6,7 @@ from datetime import datetime, timezone, timedelta
 from json import dumps, loads
 from dataclasses import dataclass
 from auth.domain.sessions import Sessions as Collection
-from auth.adapters.utils import UnitOfWork
+from auth.adapters.backend import UnitOfWork
 
 @dataclass
 class Session:
