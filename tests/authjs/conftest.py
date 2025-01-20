@@ -14,6 +14,6 @@ async def authjs_service(users):
 async def authjs_client(authjs_service):
     api = FastAPI()
     api.include_router(cqs.router)
-    api.dependency_overrides[cqs.port] = lambda: authjs_service
+    api.dependency_overrides[cqs.service] = lambda: authjs_service
     async with AsyncClient(transport=ASGITransport(api), base_url='http://testserver') as client:
         yield client

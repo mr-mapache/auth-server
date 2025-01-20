@@ -4,14 +4,22 @@ from typing import Optional
 from sqlalchemy import ForeignKey
 from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from auth.domain.emails import Emails
+from auth.domain.accounts import Accounts
+from auth.domain.sessions import Sessions
 
 class Schema(DeclarativeBase):
     pk: Mapped[int] = mapped_column(primary_key=True)
 
 class User(Schema):
     __tablename__ = 'users'
+    __allow_unmapped__ = True
     id: Mapped[UUID] = mapped_column('user_id', unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column('user_name')
+    emails: Emails = None
+    accounts: Accounts = None
+    sessions: Sessions = None
+
 
 class Account(Schema):
     __tablename__ = 'accounts'
