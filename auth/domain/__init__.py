@@ -1,1 +1,1 @@
-from auth.domain.users import Users as Repository
+from auth.domain.users import Users

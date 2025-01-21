@@ -10,7 +10,7 @@ async def test_client(authjs_client: AsyncClient):
             'emailVerified': '2026-01-01T00:00:00Z',
             'image': None
         }
-    })
+    }, headers={'TenantID': 'Test'})
     assert response.status_code == 202
 
     response = await authjs_client.post('/commands/', json ={
@@ -20,7 +20,7 @@ async def test_client(authjs_client: AsyncClient):
             'userId': '123e4567-e89b-12d3-a456-426614174002',
             'expires': '2026-01-01T00:00:00Z'
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 202
 
@@ -35,7 +35,7 @@ async def test_client(authjs_client: AsyncClient):
             'token_type': 'bearer',
             'expires': 1234
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 202
 
@@ -48,14 +48,14 @@ async def test_client(authjs_client: AsyncClient):
             'emailVerified': '2026-01-01T00:00:00Z',
             'image': None
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     response = await authjs_client.post('/queries/', json ={
         'type': 'get-user-by-id',
         'parameters': {
             'id': '123e4567-e89b-12d3-a456-426614174002'
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 200
     assert response.json() == {
@@ -74,7 +74,7 @@ async def test_client(authjs_client: AsyncClient):
             'userId': '123e4567-e89b-12d3-a456-426614174002',
             'expires': '2026-01-01T00:00:00Z'
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 202
 
@@ -84,7 +84,7 @@ async def test_client(authjs_client: AsyncClient):
         'parameters': {
             'sessionToken': '123e4567-e89b-12d3-a456-426614174006'
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 200
 
@@ -103,7 +103,7 @@ async def test_client(authjs_client: AsyncClient):
         'parameters': {
             'email': 'test@test.com'
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 200
 
@@ -113,6 +113,6 @@ async def test_client(authjs_client: AsyncClient):
             'provider': 'google',
             'providerAccountId': '123e4567-e89b-12d3-a456-426614174003',
         }
-    })
+    }, headers={'TenantID': 'Test'})
 
     assert response.status_code == 200
