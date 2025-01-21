@@ -20,7 +20,7 @@ database = Database(settings)
 cache = Cache(settings)
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     await database.setup()
     await cache.setup()
     try:
@@ -32,7 +32,7 @@ async def lifespan():
 async def authjs_service():
     yield authjs.service
 
-async def users():
+async def users_repository():
     async with UnitOfWork(database, cache) as uow:
         yield Users(uow)
 
@@ -48,7 +48,7 @@ async def handle_already_exists_exception(request: Request, exception: Exception
         detail=str(exception)
     )
 
-app = FastAPI(root_path='/authjs', lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 app.include_router(cqs.router)
 app.add_exception_handler(UserNotFound, handle_not_found_exception)
 app.add_exception_handler(AccountNotFound, handle_not_found_exception)
@@ -57,4 +57,4 @@ app.add_exception_handler(SessionNotFound, handle_not_found_exception)
 app.add_exception_handler(EmailAlreadyExists, handle_already_exists_exception)
 app.add_exception_handler(UserAlreadyExists, handle_already_exists_exception)
 app.dependency_overrides[cqs.service] = authjs_service
-app.dependency_overrides[cqs.users] = users
+app.dependency_overrides[cqs.repository] = users_repository

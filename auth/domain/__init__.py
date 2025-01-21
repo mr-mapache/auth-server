@@ -1,1 +1,4 @@
-from auth.domain.users import Users
+from typing import Protocol
+
+class Repository(Protocol):
+    ...

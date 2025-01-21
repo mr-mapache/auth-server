@@ -54,7 +54,6 @@ async def emails(uow: UnitOfWork, users: Users):
     user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
     return Emails(uow, user.pk)
 
-
 @fixture(scope='function')
 async def sessions(uow: UnitOfWork, users: Users):
     user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
