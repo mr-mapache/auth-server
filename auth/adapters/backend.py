@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from redis.asyncio import from_url
-from auth.adapters.settings import Settings
+from auth.settings import Settings
 
 class Database:
     def __init__(self, settings: Settings):

@@ -1,5 +1,4 @@
 from typing import Annotated
-from typing import Protocol
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException

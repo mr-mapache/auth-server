@@ -2,8 +2,8 @@ from pytest_asyncio import fixture
 from fastapi import FastAPI
 from fastapi import Request
 from httpx import AsyncClient, ASGITransport
-from auth.controllers.routers import cqs
 from auth.services import authjs
+from auth.endpoints import cqs
 
 @fixture(scope='function')
 async def authjs_client(users):
