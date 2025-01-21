@@ -58,3 +58,10 @@ app.add_exception_handler(EmailAlreadyExists, handle_already_exists_exception)
 app.add_exception_handler(UserAlreadyExists, handle_already_exists_exception)
 app.dependency_overrides[cqs.service] = authjs_service
 app.dependency_overrides[cqs.repository] = users_repository
+
+if __name__ == '__main__':
+    from uvicorn import run
+    from controllers import transport
+    
+    transport.app.mount('/authjs', app, name='AuthJS')
+    run(transport.app, host='0.0.0.0', port=8000)

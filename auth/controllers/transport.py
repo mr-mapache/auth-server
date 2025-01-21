@@ -5,7 +5,6 @@ from auth.controllers.middleware import SecureHeadersMiddleware
 
 settings = Settings()
 app = FastAPI(root_path=settings.transport.root_path)
-app.add_middleware(SecureHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware, 
     allow_origins=settings.middleware.cors.allow_origins,

@@ -1,7 +1,7 @@
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 if __name__ == '__main__':
+    import sys, os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
     from uvicorn import run
     from auth import authjs
     from auth.controllers import transport
