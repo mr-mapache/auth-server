@@ -35,7 +35,6 @@ from auth.services.authjs.exceptions import (
 
 from auth.services.schemas import validator
 from auth.services.service import Service
-from auth.services.service import Depends
 from auth.domain.users import Users
 from re import sub
 
@@ -43,11 +42,11 @@ service = Service()
 service.generator = lambda name: sub(r'([a-z])([A-Z])', r'\1-\2', name).lower()
 service.validator = validator
 
-async def users_port(*args, **kwargs) -> Users:
-    raise NotImplementedError('Override this dependency with a concrete implementation')
+async def port(*args, **kwargs):
+    yield
 
 @service.handler
-async def handle_create_user(command: CreateUser, users: Users = Depends(users_port)):
+async def handle_create_user(command: CreateUser, users: Users):
     if await users.read(by='id', id=command.user_id) or await users.read(by='email', address=command.user_email_address):
         raise UserAlreadyExists('User already exists')
     
@@ -62,7 +61,7 @@ async def handle_create_user(command: CreateUser, users: Users = Depends(users_p
 
 
 @service.handler
-async def handle_update_user(command: UpdateUser, users: Annotated[Users, Depends(users_port)]):
+async def handle_update_user(command: UpdateUser, users: Users):
     user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
@@ -95,7 +94,7 @@ async def handle_update_user(command: UpdateUser, users: Annotated[Users, Depend
 
 
 @service.handler
-async def handle_delete_user(command: DeleteUser, users: Annotated[Users, Depends(users_port)]):
+async def handle_delete_user(command: DeleteUser, users: Users):
     user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
@@ -104,7 +103,7 @@ async def handle_delete_user(command: DeleteUser, users: Annotated[Users, Depend
 
 
 @service.handler
-async def handle_link_account(command: LinkAccount, users: Annotated[Users, Depends(users_port)]):
+async def handle_link_account(command: LinkAccount, users: Users):
     user = await users.read(by='id', id=command.user_id)
     if not user:
         raise UserNotFound('User not found')
@@ -113,7 +112,7 @@ async def handle_link_account(command: LinkAccount, users: Annotated[Users, Depe
 
 
 @service.handler
-async def handle_unlink_account(command: UnlinkAccount, users: Annotated[Users, Depends(users_port)]):
+async def handle_unlink_account(command: UnlinkAccount, users: Users):
     user = await users.read(by='account', provider=command.account_provider, id=command.account_id)
     if not user:
         raise UserNotFound('User not found')
@@ -124,7 +123,7 @@ async def handle_unlink_account(command: UnlinkAccount, users: Annotated[Users, 
 
 
 @service.handler
-async def handle_create_session(command: CreateSession, users: Annotated[Users, Depends(users_port)]):
+async def handle_create_session(command: CreateSession, users: Users):
     user = await users.read(by='id', id=command.user_id)
     email = next(email for email in await user.emails.list() if email.is_primary)
     payload = {
@@ -138,7 +137,7 @@ async def handle_create_session(command: CreateSession, users: Annotated[Users, 
     await user.sessions.put(session)
 
 @service.handler
-async def handle_update_session(command: UpdateSession, users: Annotated[Users, Depends(users_port)]):
+async def handle_update_session(command: UpdateSession, users: Users):
     user = await users.read(by='session', id=command.session_id)
     email = next(email for email in await user.emails.list() if email.is_primary)
     payload = {
@@ -153,7 +152,7 @@ async def handle_update_session(command: UpdateSession, users: Annotated[Users, 
 
 
 @service.handler
-async def handle_delete_session(command: DeleteSession, users: Annotated[Users, Depends(users_port)]):
+async def handle_delete_session(command: DeleteSession, users: Users):
     user = await users.read(by='session', id=command.session_id)
     if not user:
         raise UserNotFound('User not found')
@@ -164,7 +163,7 @@ async def handle_delete_session(command: DeleteSession, users: Annotated[Users, 
 
 
 @service.handler
-async def handle_get_user_by_id(query: GetUserById, users: Annotated[Users, Depends(users_port)]) -> User:
+async def handle_get_user_by_id(query: GetUserById, users: Users) -> User:
     user = await users.read(by='id', id=query.user_id)
     if not user:
         raise UserNotFound('User not found')
@@ -180,7 +179,7 @@ async def handle_get_user_by_id(query: GetUserById, users: Annotated[Users, Depe
 
 
 @service.handler
-async def handle_get_user_by_email(query: GetUserByEmail, users: Annotated[Users, Depends(users_port)]) -> User:
+async def handle_get_user_by_email(query: GetUserByEmail, users: Users) -> User:
     user = await users.read(by='email', address=query.email_address)
     if not user:
         raise UserNotFound('User not found')
@@ -196,7 +195,7 @@ async def handle_get_user_by_email(query: GetUserByEmail, users: Annotated[Users
 
 
 @service.handler
-async def handle_get_user_by_account(query: GetUserByAccount, users: Annotated[Users, Depends(users_port)]) -> User:
+async def handle_get_user_by_account(query: GetUserByAccount, users: Users) -> User:
     user = await users.read(by='account', provider=query.account_provider, id=query.account_id)
     if not user:
         raise UserNotFound('User not found')
@@ -210,7 +209,7 @@ async def handle_get_user_by_account(query: GetUserByAccount, users: Annotated[U
     )
 
 @service.handler
-async def handle_get_session(query: GetSession, users: Annotated[Users, Depends(users_port)]) -> Session: 
+async def handle_get_session(query: GetSession, users: Users) -> Session: 
     session = await users.sessions.get(query.session_id)
     if not session:
         raise SessionNotFound('Session not found')
@@ -221,7 +220,7 @@ async def handle_get_session(query: GetSession, users: Annotated[Users, Depends(
 
 
 @service.handler
-async def handle_get_session_and_user(query: GetSessionAndUser, users: Annotated[Users, Depends(users_port)]) -> SessionAndUser:
+async def handle_get_session_and_user(query: GetSessionAndUser, users: Users) -> SessionAndUser:
     user = await users.read(by='session', id=query.session_id)
     if not user:
         raise UserNotFound('User not found')

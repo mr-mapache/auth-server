@@ -10,7 +10,6 @@ python = "^3.12"
 sqlalchemy = {extras = ["asyncio"], version = "^2.0.36"}
 redis = "^5.2.1"
 pydantic-settings = "^2.7.1"
-fast-depends = "^2.4.12"
 asyncpg = "^0.30.0"
 fastapi = "^0.115.6"
 pydantic = {extras = ["email"], version = "^2.10.5"}

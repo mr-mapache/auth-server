@@ -3,20 +3,14 @@ from typing import Union
 from typing import Any
 from typing import Awaitable
 from inspect import signature
-from fast_depends import inject, Provider
-from fast_depends import Depends as Depends
 from auth.services.exceptions import HandlerNotFound
 
 class Service:
     def __init__(
         self, 
-        provider: Provider = None, 
-        cast: bool = False,
         generator: Callable[[str], str] = lambda name: name,
         validator: Callable[[Any, Any], Any] = lambda type, payload: type(**payload)
     ):
-        self.provider = provider or Provider()
-        self.cast = cast
         self.handlers = dict[str, Callable[..., Awaitable[Any]]]()
         self.exceptions: dict[type[Exception], Callable[[Exception], None]] = {}
         self.types = dict[str, Any]()
@@ -86,7 +80,7 @@ class Service:
         else:
             key = self.generator(annotation.__name__)
             self.types[key] = annotation
-            self.handlers[key] = inject(handler, dependency_overrides_provider=self.provider, cast=self.cast)
+            self.handlers[key] = handler
     
     def handler(self, wrapped: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
         """
@@ -102,7 +96,7 @@ class Service:
         self.register(parameter.annotation, wrapped)
         return wrapped
     
-    async def handle(self, request: Any) -> Any:
+    async def handle(self, request: Any, *args) -> Any:
         """
         Executes the handler associated with the given request.
         Args:
@@ -120,14 +114,14 @@ class Service:
         if not handler:
             raise HandlerNotFound(f"No handler registered for type: {action}")
         try:
-            return await handler(request)
+            return await handler(request, *args)
         except Exception as exception:
             if type(exception) in self.exceptions:
                 return await self.exceptions[type(exception)](request, exception)
             else:
                 raise exception
 
-    async def execute(self, action: str, payload: Any) -> Any:
+    async def execute(self, action: str, payload: Any, *args) -> Any:
         """
         Executes the handler associated with the given request action and it's payload. It validates the payload
         asoociated with the action using the validator function provided by the user. The validator function defaults
@@ -144,4 +138,4 @@ class Service:
             ValueError: If no handler is registered for the given command or query type.
         """
         request = self.validate(action, payload)
-        return await self.handle(request)
+        return await self.handle(request, *args)

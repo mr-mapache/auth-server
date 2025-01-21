@@ -7,13 +7,17 @@ from auth.services import authjs
 
 @fixture(scope='function')
 async def authjs_service(users):
-    authjs.service.dependency_overrides[authjs.port] = lambda: users
+    async def repository():
+        yield users
+        
+    authjs.service.dependency_overrides[authjs.port] = repository
     return authjs.service
 
 @fixture(scope='function')
-async def authjs_client(authjs_service):
+async def authjs_client(users):
     api = FastAPI()
     api.include_router(cqs.router)
-    api.dependency_overrides[cqs.service] = lambda: authjs_service
+    api.dependency_overrides[cqs.repository] = lambda: users
+    api.dependency_overrides[cqs.service] = lambda: authjs.service
     async with AsyncClient(transport=ASGITransport(api), base_url='http://testserver') as client:
         yield client
