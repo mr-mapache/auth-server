@@ -1,12 +1,13 @@
-from pytest_asyncio import fixture
-from uuid import UUID
-from auth.settings import Settings
-from auth.adapters.schemas import Schema
-from auth.adapters.backend import Database, Cache, UnitOfWork
-from auth.adapters.users import Users
-from auth.adapters.accounts import Accounts
-from auth.adapters.emails import Emails
-from auth.adapters.sessions import Sessions
+from pytest_asyncio import fixture 
+from fastapi import FastAPI
+from httpx import AsyncClient, ASGITransport
+from server.settings import Settings
+from server.connections import Database, Cache, Connections
+from server.adapters.schemas import Schema
+from server.adapters.users import Users  
+from dotenv import load_dotenv
+
+load_dotenv()
 
 @fixture(scope='session')
 def settings() -> Settings:
@@ -25,6 +26,7 @@ async def database(settings: Settings):
         await database.connection.run_sync(Schema.metadata.drop_all)
         await database.teardown()
 
+
 @fixture(scope='function')
 async def cache(settings: Settings):
     cache = Cache(settings)
@@ -34,27 +36,23 @@ async def cache(settings: Settings):
     finally:
         await cache.flush()
         await cache.teardown()
+ 
 
 @fixture(scope='function')
-async def uow(database: Database, cache: Cache):
-    async with UnitOfWork(database, cache) as uow:
-        yield uow
+async def connections(database: Database, cache: Cache):
+    async with Connections(database, cache) as connections:
+        yield connections
+
 
 @fixture(scope='function')
-async def users(uow: UnitOfWork):
-    return Users(uow)
+async def users(connections: Connections, settings: Settings):
+    return Users(connections, settings)
 
-@fixture(scope='function')
-async def accounts(uow: UnitOfWork, users: Users):
-    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    return Accounts(uow, user.pk)
 
-@fixture(scope='function')
-async def emails(uow: UnitOfWork, users: Users):
-    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    return Emails(uow, user.pk)
-
-@fixture(scope='function')
-async def sessions(uow: UnitOfWork, users: Users):
-    user = await users.create(id=UUID('00000000-0000-0000-0000-000000000000'), name='Test')
-    return Sessions(uow, user.id)
+#@fixture(scope='function')
+#async def client(users: Users, settings: Settings):  
+#    api = FastAPI()
+#    api.include_router(authentication.router) 
+#    api.dependency_overrides[authentication.service] = lambda: Authentication(users, settings)
+#    async with AsyncClient(transport=ASGITransport(api), base_url='http://testserver') as client:
+#        yield client

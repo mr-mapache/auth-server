@@ -1,25 +1,13 @@
-CREATE TABLE users (
-    pk SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL,
-    user_name VARCHAR(50),
-);
+-- Working!
 
-CREATE TABLE accounts (
-    pk SERIAL PRIMARY KEY,
-    account_id VARCHAR(255) NOT NULL,
-    account_type VARCHAR(100) NOT NULL,
-    account_provider VARCHAR(100) NOT NULL,
-    user_pk INTEGER NOT NULL,
-    UNIQUE (account_provider, account_id)
+CREATE TABLE clients (
+    pk UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID, -- This is for reference but is managed by the Tenants Service
+    name VARCHAR(255) NOT NULL,
+    client_id VARCHAR(255) UNIQUE NOT NULL,
+    client_secret TEXT NOT NULL,
+    redirect_uris TEXT[] NOT NULL,
+    grant_types TEXT[] NOT NULL,
+    scopes TEXT[] NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
 );
-
-CREATE TABLE emails (
-    pk SERIAL PRIMARY KEY,
-    email_address VARCHAR(100) UNIQUE NOT NULL,
-    email_is_primary BOOLEAN NOT NULL,
-    email_verified_at TIMESTAMP WITH TIME ZONE,
-    user_pk INTEGER NOT NULL,
-    FOREIGN KEY (user_pk) REFERENCES users(pk) ON DELETE CASCADE
-);
-
-CREATE UNIQUE INDEX ON emails (user_pk) WHERE email_is_primary = TRUE;

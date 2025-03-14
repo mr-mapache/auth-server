@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "auth"
+name = "fastauth"
 version = "0.1.0"
 description = ""
 authors = ["mr-mapache <eric.m.cardozo@mi.unc.edu.ar>"]
@@ -7,24 +7,22 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-sqlalchemy = {extras = ["asyncio"], version = "^2.0.36"}
-redis = "^5.2.1"
-pydantic-settings = "^2.7.1"
+fastapi = {extras = ["standard"], version = "^0.115.11"}
+python-jose = {extras = ["cryptography"], version = "^3.4.0"}
+pydantic = {extras = ["email"], version = "^2.10.6"}
+email-validator = "^2.2.0"
+pydantic-settings = "^2.8.1"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.38"}
 asyncpg = "^0.30.0"
-fastapi = "^0.115.6"
-pydantic = {extras = ["email"], version = "^2.10.5"}
-anyio = "^4.8.0"
-secure = "^1.0.1"
+redis = "^5.2.1"
+types-python-jose = "^3.4.0.20250224"
+passlib = "^1.7.4"
 
 
 [tool.poetry.group.tests.dependencies]
-httpx = "^0.28.1"
-pytest-asyncio = "^0.25.2"
-trio = "^0.28.0"
-
-
-[tool.poetry.group.server.dependencies]
-uvicorn = "^0.34.0"
+pytest = "^8.3.5"
+pytest-asyncio = "^0.25.3"
+mypy = "^1.15.0"
 
 [build-system]
 requires = ["poetry-core"]

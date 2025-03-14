@@ -1,15 +1,20 @@
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from redis.asyncio import from_url
-from auth.settings import Settings
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncConnection
+from redis.asyncio import from_url, Redis
+from server.settings import Settings 
+
 
 class Database:
+    engine: AsyncEngine
+    connection: AsyncConnection
+
     def __init__(self, settings: Settings):
         self.engine = create_async_engine(url=settings.database.uri)
         
     async def setup(self):
         self.connection = await self.engine.connect()
-        self.sessionmaker = async_sessionmaker(bind=self.connection)
+        self.sessionmaker = async_sessionmaker(bind=self.connection, expire_on_commit=False)
 
     async def teardown(self):
         await self.connection.close()
@@ -17,6 +22,8 @@ class Database:
 
 
 class Cache:
+    redis: Redis
+
     def __init__(self, settings: Settings):
         self.settings = settings
 
@@ -29,15 +36,17 @@ class Cache:
     async def flush(self):
         await self.redis.flushall()
 
+ 
+class Connections:
+    sql: AsyncSession
 
-class UnitOfWork:
     def __init__(self, database: Database, cache: Cache):
         self.database = database
         self.cache = cache
     
     async def __aenter__(self):
         self.sql = self.database.sessionmaker()
-        self.redis = self.cache.redis
+
         await self.sql.begin()
         return self
     

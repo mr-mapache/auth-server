@@ -1,91 +1,98 @@
+from uuid import uuid4
 from pytest import mark
-from datetime import datetime, timezone, timedelta
-from auth.domain.users import Users
-from auth.domain.accounts import Accounts
-from auth.domain.emails import Emails
-from auth.domain.sessions import Sessions
-
-@mark.anyio
+from pydantic import SecretStr
+from pydantic import SecretBytes 
+from datetime import datetime, UTC, timedelta
+from server.ports.users import Users
+ 
+@mark.asyncio
 async def test_users(users: Users):
-    user = await users.create(name='test')
-    assert getattr(user, 'pk') is not None
-    user = await users.read(by='id', id=user.id)
-    assert user.name == 'test'
-    user = await users.update(user.id, name='other')
-    assert user.name == 'other'
-    await users.delete(user.id)
-    assert await users.read(by='id', id=user.id) == None
-
-@mark.anyio
-async def test_accounts(accounts: Accounts):
-    account = accounts.create('oauth', 'google', '123')
-    await accounts.add(account)
-    assert getattr(account, 'pk') is not None
-    account = await accounts.get('google', '123')
-    assert account.provider == 'google'
-    assert account.id == '123'
-    assert account.type == 'oauth'
-    account_list = await accounts.list()
-    assert len(account_list) == 1
-    await accounts.remove(account)
-    assert await accounts.get('google', '123') == None
+    id = uuid4()
+    user = await users.create(id=id)
+    user = await users.get(id)
+    assert user.id == id
+    await users.delete(id)
+    assert not await users.get(id)
 
 
-@mark.anyio
-async def test_emails(emails: Emails):
-    email = emails.create('test@test.com', True, False)
-    await emails.add(email)
-    assert getattr(email, 'pk') is not None
-    email = await emails.get('test@test.com')
-    assert email.address == 'test@test.com'
-    assert email.is_verified == False
-    assert email.is_primary == True
-    email.address = 'other@test.com'
-    email.is_primary = True
-    email.is_verified = True
-    email.verified_at = datetime.now(timezone.utc)
-    await emails.update(email)
-    email = await emails.get('other@test.com')
-    assert email.address == 'other@test.com'
-    assert email.is_verified == True
-    assert email.is_primary == True
-    email_list = await emails.list()
-    assert len(email_list) == 1
-    await emails.remove(email)
-    assert await emails.get('other@test.com') == None
+@mark.asyncio
+async def test_credentials(users: Users):
+    id = uuid4()
+    user = await users.create(id=id)
+    await user.credentials.add(SecretStr('test'), SecretBytes('test'))
+    assert await user.credentials.verify(SecretStr('test'), SecretBytes('test'))
+    await user.credentials.update(SecretStr('test'), SecretBytes('new'))
+    assert not await user.credentials.verify(SecretStr('test'), SecretBytes('test'))
+    assert await user.credentials.verify(SecretStr('test'), SecretBytes('new'))
+    user = await users.read(by='credentials', username=SecretStr('test'))
+    assert user.id == id
 
 
-@mark.anyio
-async def test_sessions(sessions: Sessions):
-    session = sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60))
-    await sessions.put(session)
+@mark.asyncio
+async def test_sessions(users: Users):
+    id = uuid4()
+    user = await users.create(id)
     
-    session = await sessions.get('00000000-0000-0000-0000-000000000000')
-    assert session.id == '00000000-0000-0000-0000-000000000000'
-    assert session.payload == {'test': 'test'}
-    assert session.expires_at > datetime.now(timezone.utc)
+    
+    payload = {"user": "test_user"}
+    expires_in = timedelta(hours=1)
+    
+    session = await user.sessions.create(expires_in, payload)
+    assert session.payload == payload
 
-    session_list = await sessions.list()
+    session = await user.sessions.get(session.id)
+    assert session.payload == payload
+    
+    session = await user.sessions.create(expires_in, payload)
+    assert session.payload == payload
+
+    session_list = await user.sessions.list()
+    assert len(session_list) == 2
+
+    await user.sessions.delete(session.id)
+    
+    session_list = await user.sessions.list()
     assert len(session_list) == 1
-    await sessions.remove(session)
-    assert await sessions.get('00000000-0000-0000-0000-000000000000') == None
 
-    session = sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) - timedelta(seconds=60))
-    await sessions.put(session)
-    assert await sessions.get('00000000-0000-0000-0000-000000000000') == None
-
-    session_list = [
-        sessions.create('00000000-0000-0000-0000-000000000000', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
-        sessions.create('00000000-0000-0000-0000-000000000001', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
-        sessions.create('00000000-0000-0000-0000-000000000002', {'test': 'test'}, datetime.now(timezone.utc) + timedelta(seconds=60)),
-    ]
-
-    for session in session_list:
-        await sessions.put(session)
-
-    session_list = await sessions.list()
-    assert len(session_list) == 3
-
-    await sessions.clear()
-    session_list = await sessions.list()
+    await user.sessions.clear()
+    
+    session_list = await user.sessions.list()
     assert len(session_list) == 0
+
+
+@mark.asyncio
+async def test_emails(users: Users):
+    id = uuid4()
+    user = await users.create(id)
+    
+    await user.emails.add('test@test.com', primary=True, verified=False)
+    user = await users.read(by='email', address='test@test.com')
+    assert user
+    email = await user.emails.get('test@test.com')
+    assert email.is_primary == True
+    assert email.is_verified == False
+
+    list = await user.emails.list()
+    assert len(list) == 1
+
+    
+    await user.emails.add('test2@test.com', primary=True, verified=False)
+
+    email = await user.emails.get('test2@test.com')
+    assert email.is_primary == True
+    assert email.is_verified == False
+
+    
+    email = await user.emails.get('tes2t@test.com')
+    assert not email
+
+
+    email = await user.emails.get('test@test.com')
+    assert email.is_primary == False
+    assert email.is_verified == False
+    
+    for email in await user.emails.list(): 
+        await user.emails.remove(email)
+
+    list = await user.emails.list()
+    assert len(list) == 0
