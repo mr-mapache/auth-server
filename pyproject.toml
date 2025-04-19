@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fastauth"
+name = "server"
 version = "0.1.0"
 description = ""
 authors = ["mr-mapache <eric.m.cardozo@mi.unc.edu.ar>"]
