@@ -3,66 +3,64 @@ from typing import Protocol
 from asyncio import to_thread 
 from sqlalchemy.sql import insert, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from passlib.context import CryptContext
+from bcrypt import checkpw, hashpw, gensalt 
 
 from server.settings import Settings
-from server.connections import Connections
-from server.adapters.schemas import Username, Password, Owner
+from server.connections import UnitOfWork
+from server.adapters.schemas import User, Password, Owner
 
 class Secret(Protocol):
 
     def get_secret_value() -> str | bytes:
         ...
 
-
 def reveal(secret: Secret) -> str | bytes:
-    return secret.get_secret_value()
-
+    if isinstance(secret, str):
+        return secret
+    else:
+        return secret.get_secret_value()
 
 class Cryptography:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.context = CryptContext(schemes=['bcrypt'])
 
-    def verify(self, secret: Secret, hash: bytes) -> bool:
-        return  self.context.verify(reveal(secret), hash)
+    async def verify(self, secret: Secret, hash: bytes) -> bool:
+        return await to_thread(checkpw, reveal(secret), hash) 
 
-    def hash(self, secret: Secret) -> bytes:
-        hash = self.context.hash(reveal(secret))
-        return hash.encode('utf-8')
+    async def hash(self, secret: Secret) -> bytes: 
+        return await to_thread(hashpw, reveal(secret), gensalt())
     
 
 class Credentials:
-    def __init__(self, connections: Connections, settings: Settings, owner: Owner):
-        self.connections = connections 
+    def __init__(self, uow: UnitOfWork, settings: Settings, owner: Owner):
+        self.uow = uow 
         self.owner = owner
         self.cryptography = Cryptography(settings)
 
     @property
     def sql(self) -> AsyncSession:
-        return self.connections.sql
+        return self.uow.sql
     
-    async def add(self, username: Secret, password: Secret) -> None:
-        command = insert(Username).values(value=reveal(username), user_pk=self.owner.id).returning(Username.pk)
-        result = await self.sql.execute(command)
-        username_pk = result.scalar()
-        hash = await to_thread(self.cryptography.hash, password)
-        command = insert(Password).values(hash=hash, username_pk=username_pk)
+    async def put(self, password: Secret) -> None:  
+        hash = await self.cryptography.hash(password) 
+        command = (
+            insert(Password).
+            values(hash=hash, user_pk=self.owner.id)
+        )
         await self.sql.execute(command)
-
-    async def update(self, username: Secret, password: Secret) -> None:        
-        command = update(Username).values(value=reveal(username), user_pk=self.owner.id).returning(Username.pk)
-        result = await self.sql.execute(command)
-        username_pk = result.scalar()
-        hash = await to_thread(self.cryptography.hash, password)
-        command = update(Password).where(username_pk==username_pk).values(hash=hash)
-        await self.sql.execute(command)
-
-    async def verify(self, username: Secret, password: Secret) -> bool:
-        query = select(Password).join(Username).where(Username.value == reveal(username)).order_by(Password.created_at.desc()).limit(1)
+ 
+    async def verify(self, username: Secret, password: Secret) -> bool: 
+        query = (
+            select(Password).
+            join(User).
+            where(User.username == reveal(username)).
+            where(Password.is_active == True).
+            order_by(Password.pk.desc()).
+            limit(1)
+        )
         result = await self.sql.execute(query)
-        secret = result.scalars().first()
+        secret = result.scalars().first()  
         if not secret:
-            return False 
-        verified = await to_thread(self.cryptography.verify, password, secret.hash)
+            return False   
+        verified = await self.cryptography.verify(password, secret.hash)
         return True if verified else False

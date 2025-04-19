@@ -23,17 +23,10 @@ class User(Schema):
     __tablename__ = 'users'
     __allow_unmapped__ = True
     id: Mapped[UUID] = mapped_column('user_id', unique=True, nullable=False) 
+    username: Mapped[str] = mapped_column('user_username', unique=True, nullable=True)
     credentials: Credentials = None
     sessions: Sessions = None
     emails: Emails
-
-class Username(Schema):
-    __tablename__ = 'usernames'
-    pk: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    value: Mapped[str] = mapped_column('username', nullable=False, unique=True)
-    created_at: Mapped[datetime] = mapped_column('username_created_at', TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column('username_updated_at', TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
-    user_pk: Mapped[int] = mapped_column(ForeignKey('users.pk', ondelete='CASCADE'), nullable=False)
 
 class Password(Schema):
     __tablename__ = 'passwords'
@@ -42,8 +35,7 @@ class Password(Schema):
     version: Mapped[int] = mapped_column('password_version', default=1)
     is_active: Mapped[bool] = mapped_column('password_is_active', default=True)
     created_at: Mapped[datetime] = mapped_column('password_created_at', TIMESTAMP(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column('password_updated_at', TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
-    username_pk: Mapped[int] = mapped_column(ForeignKey('usernames.pk', ondelete='CASCADE'), nullable=False)
+    user_pk: Mapped[int] = mapped_column(ForeignKey('users.pk', ondelete='CASCADE'), nullable=False)
  
 class Email(Schema):
     __tablename__ = 'emails'

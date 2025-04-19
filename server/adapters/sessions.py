@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from redis.asyncio import Redis
 from server.settings import Settings
 from server.adapters.schemas import Owner
-from server.connections import Connections
+from server.connections import UnitOfWork
 
 @dataclass
 class Session:
@@ -26,13 +26,13 @@ class Session:
     
 
 class Sessions:
-    def __init__(self, connections: Connections, settings: Settings, owner: Owner | None):
-        self.connections = connections
+    def __init__(self, uow: UnitOfWork, settings: Settings, owner: Owner | None):
+        self.uow = uow
         self.owner = owner
 
     @property
     def redis(self) -> Redis:
-        return self.connections.cache.redis
+        return self.uow.cache.redis
  
     async def create(self, expires_in: timedelta, payload: dict[str, Any] | None = None) -> Session:
         assert self.owner is not None, 'User is create a session'

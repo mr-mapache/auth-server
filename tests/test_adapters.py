@@ -4,7 +4,8 @@ from pydantic import SecretStr
 from pydantic import SecretBytes 
 from datetime import datetime, UTC, timedelta
 from server.ports.users import Users
- 
+
+
 @mark.asyncio
 async def test_users(users: Users):
     id = uuid4()
@@ -13,19 +14,23 @@ async def test_users(users: Users):
     assert user.id == id
     await users.delete(id)
     assert not await users.get(id)
+    await users.create(id, 'test')
+    user = await users.read(by='credentials', username='test')
+    assert user.id == id
 
 
 @mark.asyncio
 async def test_credentials(users: Users):
     id = uuid4()
-    user = await users.create(id=id)
-    await user.credentials.add(SecretStr('test'), SecretBytes('test'))
-    assert await user.credentials.verify(SecretStr('test'), SecretBytes('test'))
-    await user.credentials.update(SecretStr('test'), SecretBytes('new'))
-    assert not await user.credentials.verify(SecretStr('test'), SecretBytes('test'))
-    assert await user.credentials.verify(SecretStr('test'), SecretBytes('new'))
-    user = await users.read(by='credentials', username=SecretStr('test'))
-    assert user.id == id
+    user = await users.create(id=id, username='test')
+    await user.credentials.put(SecretBytes(b'test'))
+    assert await user.credentials.verify(SecretStr('test'), SecretBytes(b'test')) 
+
+    await users.update(id=id, username=SecretStr('new'))
+     
+    assert not await user.credentials.verify(SecretStr('test'), SecretBytes(b'test'))
+    await user.credentials.put(SecretBytes(b'new'))
+    assert await user.credentials.verify(SecretStr('new'), SecretBytes(b'new')) 
 
 
 @mark.asyncio

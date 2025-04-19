@@ -1,9 +1,9 @@
+from typing import Optional
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.ext.asyncio import AsyncConnection
 from redis.asyncio import from_url, Redis
 from server.settings import Settings 
-
 
 class Database:
     engine: AsyncEngine
@@ -35,9 +35,24 @@ class Cache:
 
     async def flush(self):
         await self.redis.flushall()
+        
+    async def get(self, key: str) -> Optional[str]:
+        value = await self.redis.get(key)
+        if value is not None:
+            return bytes(value).decode('utf-8')
+        return None
+    
+    async def set(self, key: str, value: str, expires_in: int | None = None):
+        if expires_in is not None:
+            await self.redis.set(key, value, ex=expires_in)
+        else:
+            await self.redis.set(key, value)
+
+    async def delete(self, key: str):
+        await self.redis.delete(key)
 
  
-class Connections:
+class UnitOfWork:
     sql: AsyncSession
 
     def __init__(self, database: Database, cache: Cache):

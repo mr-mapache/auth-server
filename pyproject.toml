@@ -16,7 +16,11 @@ sqlalchemy = {extras = ["asyncio"], version = "^2.0.38"}
 asyncpg = "^0.30.0"
 redis = "^5.2.1"
 types-python-jose = "^3.4.0.20250224"
-passlib = "^1.7.4"
+bcrypt = "^4.3.0"
+authlib = "^1.5.2"
+httpx = "^0.28.1"
+uvicorn = "^0.34.1"
+itsdangerous = "^2.2.0"
 
 
 [tool.poetry.group.tests.dependencies]

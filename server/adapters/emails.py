@@ -5,19 +5,19 @@ from sqlalchemy.sql import insert, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.settings import Settings
-from server.connections import Connections
+from server.connections import UnitOfWork
 from server.adapters.schemas import Owner
 from server.adapters.schemas import Owner, Email
 
 class Emails:
-    def __init__(self, connections: Connections, settings: Settings, owner: Owner):
-        self.connections = connections
+    def __init__(self, uow: UnitOfWork, settings: Settings, owner: Owner):
+        self.uow = uow
         self.settings = settings
         self.owner = owner
 
     @property
     def sql(self) -> AsyncSession:
-        return self.connections.sql
+        return self.uow.sql
      
     async def add(self, address: str, primary: bool, verified: bool): 
         if primary:
@@ -41,16 +41,27 @@ class Emails:
 
 
     async def get(self, address: str) -> Optional[Email]:
-        query = select(Email).where(Email.user_pk == self.owner.id, Email.address == address)
+        query = (
+            select(Email).
+            where(Email.user_pk == self.owner.id, Email.address == address)
+        )
         result = await self.sql.execute(query) 
         return result.scalars().first()
     
+    
     async def list(self) -> list[Email]:
-        query = select(Email).where(Email.user_pk == self.owner.id)
+        query = (
+            select(Email).
+            where(Email.user_pk == self.owner.id)
+        )
         result = await self.sql.execute(query)
         return result.scalars().all()
+    
  
     async def remove(self, email: Email) -> None:
-        command = delete(Email).where(Email.user_pk == self.owner.id, Email.address == email.address)
+        command = (
+            delete(Email).
+            where(Email.user_pk == self.owner.id, Email.address == email.address)
+        )
         await self.sql.execute(command)
         email.pk = None

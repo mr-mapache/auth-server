@@ -2,7 +2,7 @@ from pytest_asyncio import fixture
 from fastapi import FastAPI
 from httpx import AsyncClient, ASGITransport
 from server.settings import Settings
-from server.connections import Database, Cache, Connections
+from server.connections import Database, Cache, UnitOfWork
 from server.adapters.schemas import Schema
 from server.adapters.users import Users  
 from dotenv import load_dotenv
@@ -39,14 +39,14 @@ async def cache(settings: Settings):
  
 
 @fixture(scope='function')
-async def connections(database: Database, cache: Cache):
-    async with Connections(database, cache) as connections:
-        yield connections
+async def uow(database: Database, cache: Cache):
+    async with UnitOfWork(database, cache) as uow:
+        yield uow
 
 
 @fixture(scope='function')
-async def users(connections: Connections, settings: Settings):
-    return Users(connections, settings)
+async def users(uow: UnitOfWork, settings: Settings):
+    return Users(uow, settings)
 
 
 #@fixture(scope='function')

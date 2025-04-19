@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Optional
-from server.ports.credentials import Credentials
+from server.ports.credentials import Credentials, Secret
 from server.ports.sessions import Sessions
 from server.ports.emails import Emails
 
@@ -30,10 +30,12 @@ class User:
 
 class Users:
 
-    async def create(self, id: UUID) -> Optional[User]:...
+    async def create(self, id: UUID, username: Optional[str | Secret] = None) -> Optional[User]:...
      
     async def get(self, id: UUID) -> Optional[User]:...
 
     async def read(self, by: str, **kwargs) -> Optional[User]:...
     
+    async def update(self, id: UUID, username: str | Secret) -> User:...
+
     async def delete(self, id: UUID) -> Optional[User]:...

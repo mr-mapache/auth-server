@@ -25,3 +25,17 @@ async def service(*args, **kwargs) -> Registration:
 async def handle(form: Annotated[Shet, Form(...)], service: Annotated[Registration, Depends(service)]): 
     await service.handle(form)
     Response(status_code=status.HTTP_201_CREATED)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
